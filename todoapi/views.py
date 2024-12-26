@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.contrib.auth.models import User
-from .models import Project, Todo
+from .models import Project, Todo, Notification
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -21,7 +21,7 @@ def user_projects(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_todos(request):
-    todos = Todo.objects.filter(project__user=request.user).values()
+    todos = Todo.objects.filter(user=request.user).values()
     return Response(todos)
 
 
@@ -65,19 +65,30 @@ def create_project(request):
 @permission_classes([IsAuthenticated])
 def create_todo(request):
     title = request.data.get('title')
-    description = request.data.get('description','')
-    due_date = request.data.get('due_date',None)
-    priority = request.data.get('priority','')
-    project = request.data.get('project')
-    if not title:
-        return Response({'error':'Title is required'}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        project = Project.objects.get(id=project, user=request.user)
-    except Project.DoesNotExist:
-        return Response({'error': 'Project not found or does not belong to the user'}, status=status.HTTP_404_NOT_FOUND)
+    description = request.data.get('description', '')
+    due_date = request.data.get('due_date', None)
+    priority = request.data.get('priority', '')
+    project_id = request.data.get('project', None)
 
-    todo = Todo.objects.create(title=title, description=description, due_date=due_date, priority=priority,
-                               project=project, user=request.user)
+    if not title:
+        return Response({'error': 'Title is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    project = None
+    if project_id:
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return Response({'error': 'Project not found or does not belong to the user'}, status=status.HTTP_404_NOT_FOUND)
+
+    todo = Todo.objects.create(
+        title=title,
+        description=description,
+        due_date=due_date,
+        priority=priority,
+        project=project,
+        user=request.user
+    )
+
     return Response({
         'message': 'Todo created successfully',
         'todo': {
@@ -86,10 +97,11 @@ def create_todo(request):
             'description': todo.description,
             'due_date': todo.due_date,
             'priority': todo.priority,
-            'project': todo.project.id,
+            'project': todo.project.id if todo.project else None,
             'user': todo.user.id,
         }
     }, status=status.HTTP_201_CREATED)
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -142,7 +154,7 @@ def update_todo(request, todo_id):
 
     title = request.data.get('title')
     description = request.data.get('description')
-    due_date = request.data.get('due_date')
+    due_date = request.data.get('dueDate')
     priority = request.data.get('priority')
     project = request.data.get('project')
 
@@ -154,7 +166,9 @@ def update_todo(request, todo_id):
         todo.due_date = due_date
     if priority and isinstance(priority, str):
         todo.priority = priority
-    if project:
+    if project=='' or project is None:
+        todo.project = None
+    else:
         try:
             project = Project.objects.get(id=project, user=request.user)
             todo.project = project
@@ -167,5 +181,120 @@ def update_todo(request, todo_id):
         return Response({'error': 'Failed to update todo'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({'message': 'Todo updated successfully'}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_notification(request):
+    title = request.data.get('title')
+    description = request.data.get('description', '')
+    due_date = request.data.get('due_date', None)
+    priority = request.data.get('priority', '')
+    recipient_username = request.data.get('recipient')
+
+    if not title or not recipient_username:
+        return Response({'error': 'Title and recipient are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate recipient
+    try:
+        recipient = User.objects.get(username=recipient_username)
+    except User.DoesNotExist:
+        return Response({'error': 'Recipient not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Create Todo
+    try:
+        todo = Todo.objects.create(
+            title=title,
+            description=description,
+            due_date=due_date,
+            priority=priority,
+            user=None,  # Todo not yet assigned to a user
+            project=None  # Todo not yet associated with a project
+        )
+    except Exception as e:
+        return Response({'error': f'Failed to create todo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Create Notification
+    try:
+        notification = Notification.objects.create(
+            todo=todo,
+            sender=request.user,
+            recipient=recipient,
+            message=f"{request.user.username} has sent you a todo: {title}",
+            status='Pending'
+        )
+    except Exception as e:
+        return Response({'error': f'Failed to create notification: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(
+        {'message': 'Notification sent successfully', 'notification_id': notification.id},
+        status=status.HTTP_201_CREATED
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def respond_to_todo_notification(request, notification_id):
+    action = request.data.get('action')
+    if action not in ['accept', 'decline']:
+        return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        notification = Notification.objects.get(id=notification_id, recipient=request.user)
+    except Notification.DoesNotExist:
+        return Response({'error': 'Notification not found or does not belong to the user'}, status=status.HTTP_404_NOT_FOUND)
+    if action == 'accept':
+        todo=notification.todo
+        todo.user=request.user
+        todo.save()
+        notification.status = 'Responded'
+        Notification.objects.create(
+            todo=todo,
+            sender=request.user,
+            recipient=notification.sender,
+            message=f"{request.user.username} has accepted your todo: {todo.title}",
+            status='Informational'
+        )
+
+    elif action == 'decline':
+        notification.status = 'Responded'
+        Notification.objects.create(
+            todo=notification.todo,
+            sender=request.user,
+            recipient=notification.sender,
+            message=f"{request.user.username} has declined your todo: {notification.todo.title}",
+            status='Informational'
+        )
+    notification.save()
+    return Response({'message': 'Notification responded successfully'}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_notifications(request):
+    notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at').values(
+        'id',                   # Notification ID
+        'todo__id',
+        'todo__title',
+        'sender__username',     # Sender username
+        'recipient__username',  # Recipient username
+        'message',              # Notification message
+        'status',               # Notification status
+        'created_at'            # Created timestamp
+    )
+    return Response(list(notifications))
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_informational_as_responded(request):
+    notifications = Notification.objects.filter(recipient=request.user, status='Informational')
+    updated_count = notifications.update(status='Responded')
+    return Response({'message': f'{updated_count} notifications marked as Responded'}, status=status.HTTP_200_OK)
+
+
+
+
+
+
+
 
 # Create your views here.
