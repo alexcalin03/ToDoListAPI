@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Page</title>
+</head>
+<body>
+    <div class="account-container">
+        <h2>Account</h2>
+        <div class="info-div" id="username-div">
+            <p>Username: <span id="username">Username</span></p>
+        </div>
+        <div class="info-div" id="password-div">
+            <p>Password: <span id="password">********</span></p>
+            <button id="change-password-button">Change Password</button>
+        </div>
+        <button class="back-button" id="back-to-home">Back to Home</button>
+    </div>
+
+    <!-- Pop-up for changing password -->
+    <div class="popup hidden" id="change-password-popup">
+        <span class="close" id="change-password-close">&times;</span>
+        <div class="popup-content" id="popup-content">
+            <h2>Change Password</h2>
+            <form id="change-password-form">
+                <label for="old-password">Old Password:</label>
+                <input type="password" id="old-password" name="old-password" required>
+                <label for="new-password">New Password:</label>
+                <input type="password" id="new-password" name="new-password" required>
+                <label for="confirm-password">Confirm New Password:</label>
+                <input type="password" id="confirm-password" name="confirm-password" required>
+                <button type="submit" id="submit-change-password">Submit</button>
+            </form>
+        </div>
+</body>
+</html>

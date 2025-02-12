@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Taskify</h1>
+            <div class="send-notification" id="send-notification-button">
+                <i class="fas fa-paper-plane"></i>
+            </div>
+            <div class="notification-icon" id="notification-button">
+                <i class="fas fa-bell"></i>
+                <span class ="notification-counter hidden" id="notification-counter">0</span>
+            </div>
+            <div class="menu-icon" id="menu-icon">
+                &#9776; <!-- Unicode for sandwich menu -->
+            </div>
+            
+        </div>
+        <nav class="menu" id="menu">
+            <ul>
+                <li><a href="#account" id="account-button">Account</a></li>
+                <li><a href="#logout" id="logout-button">Log out</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <div id="container">
+        <aside id="sidebar">
+            <h2>My lists</h2>
+        </aside>
+        <button id="add-project-button" class="floating-button">+</button>
+        <button id="delete-project-button" class="floating-button">
+            <i class="fas fa-trash-alt" id="delete-project-button-logo"></i>
+        </button>
+        <button id="edit-project-button" class="floating-button">
+            <i class="fas fa-edit"
+            ></i>
+        </button>
+        <main id="content">
+        </main>
+        <button id="add-todo-button" class="floating-button">+</button>
+        <button id="delete-todo-button" class="floating-button">
+            <i class="fas fa-trash-alt" id="delete-todo-button-logo"></i>
+        </button>
+        <button id="edit-todo-button" class="floating-button">
+            <i class="fas fa-edit"></i>
+        </button>
+        <section id="todocontent">
+        </section>
+    </div>
+
+    <!-- Pop-up for adding a new project -->
+<div id="add-project-popup" class="popup hidden">
+    <div class="popup-content">
+        <h3>Add New Project</h3>
+        <form id="add-project-form">
+            <label for="project-name">Project Name:</label>
+            <input type="text" id="project-name" name="project-name" required>
+            <button type="submit">Add Project</button>
+            <button type="button" id="close-project-popup">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<!-- Pop-up for adding a new todo -->
+<div id="add-todo-popup" class="popup hidden">
+    <div class="popup-content">
+        <h3>Add New Todo</h3>
+        <form id="add-todo-form">
+            <label for="todo-title">Title:</label>
+            <input type="text" id="todo-title" name="todo-title" required>
+            <label for="todo-description">Description:</label>
+            <textarea id="todo-description" name="todo-description" required></textarea>
+            <label for="todo-due-date">Due Date:</label>
+            <input type="date" id="todo-due-date" name="todo-due-date" required>
+            <label for="todo-priority">Priority:</label>
+            <select id="todo-priority" name="todo-priority" required>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+            </select>
+            <button type="submit">Add Todo</button>
+            <button type="button" id="close-todo-popup">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<!-- Pop-up for deleting a project -->
+<div id="delete-project-popup" class="popup hidden">
+    <div class="popup-content">
+        <p>Are you sure you want to delete this project?</p>
+        <button id="delete-project-confirmation">Delete Project</button>
+        <button id="close-delete-project-popup">Cancel</button>
+    </div>
+</div>
+
+<!-- Pop-up for deleting a todo -->
+<div id="delete-todo-popup" class="popup hidden">
+    <div class="popup-content">
+        <p>Are you sure you want to delete this todo?</p>
+        <button id="delete-todo-confirmation">Delete Todo</button>
+        <button id="close-delete-todo-popup">Cancel</button>
+    </div>
+</div>
+
+<!-- Pop-up for editing a project -->
+<div id="edit-project-popup" class="popup hidden">
+    <div class="popup-content">
+        <h3>Edit Project</h3>
+        <form id="edit-project-form">
+            <label for="edit-project-name">New Project Name:</label>
+            <input type="text" id="edit-project-name" name="edit-project-name" required>
+            <button type="submit">Edit Project</button>
+            <button type="button" id="close-edit-project-popup">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<!-- Pop-up for editing a todo -->
+<div id="edit-todo-popup" class="popup hidden">
+    <div class="popup-content">
+        <h3>Edit Todo</h3>
+        <form id="edit-todo-form">
+            <label for="edit-todo-title">New Title:</label>
+            <input type="text" id="edit-todo-title" name="edit-todo-title" >
+            <label for="edit-todo-description">New Description:</label>
+            <textarea id="edit-todo-description" name="edit-todo-description" ></textarea>
+            <label for="edit-todo-due-date">New Due Date:</label>
+            <input type="date" id="edit-todo-due-date" name="edit-todo-due-date" >
+            <label for="edit-todo-priority">New Priority:</label>
+            <select id="edit-todo-priority" name="edit-todo-priority" required>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+            </select>
+            <label for="edit-todo-project">Move to Project:</label>
+            <select id="edit-todo-project" name="edit-todo-project">
+                <!-- Options will be dynamically populated -->
+            </select>
+            <button type="submit">Edit Todo</button>
+            <button type="button" id="close-edit-todo-popup">Cancel</button>
+        </form>
+    </div>
+
+</div>
+
+<!-- Pop up for notifications -->
+<div id="notification-popup" class="popup hidden">
+    <div class="popup-content">
+        <button id="clear-notifications" class="clear-button">clear</button>
+        <button id="close-notification-popup" class="close-button">&times;</button>
+        <h3>Notifications</h3>
+        <div id="notification-list">
+            <!-- List items will be dynamically populated -->
+        </div>
+        
+    </div>
+
+</div>
+
+<div id="send-notification-popup" class="popup hidden">
+    <div class="popup-content">
+        <h3>Send Todo Notification</h3>
+        <form id="send-notification-form">
+            <label for="send-todo-title">Title:</label>
+            <input type="text" id="send-todo-title" name="send-todo-title" required>
+
+            <label for="send-todo-description">Description:</label>
+            <textarea id="send-todo-description" name="send-todo-description" required></textarea>
+
+            <label for="send-todo-due-date">Due Date:</label>
+            <input type="date" id="send-todo-due-date" name="send-todo-due-date" required>
+
+            <label for="send-todo-priority">Priority:</label>
+            <select id="send-todo-priority" name="send-todo-priority" required>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+            </select>
+
+            <label for="send-todo-user">Send To:</label>
+            <input type="text" id="send-todo-user" name="send-todo-user" required>
+
+            <button type="submit">Send Notification</button>
+            <button type="button" id="close-send-notification-popup">Cancel</button>
+        </form>
+    </div>
+</div>
+
+
+
+</body>
+</html>
